@@ -143,18 +143,18 @@ mkdir -p $path/dedup_aligned_reads/$run
 mkdir -p $path/dedup_aligned_reads/tmp/$run
 cd $path/aligned_reads/$run
 
-module load agent
+module load gatk
 
-	for filename in *sorted.bam
+	for bamfile in *sorted.bam
         	do
-		java -Xmx4G -jar -Djava.io.tmpdir=$path/dedup_aligned_reads/tmp/$run /disk/work/shared/tools/agent-3.0.6/agent/lib/creak-1.0.5.jar \
-        	-o $path/dedup_aligned_reads/$run/$(echo $filename | sed 's/sorted.bam/deduplexed.bam/') \
-        	-c HYBRID -d 0 -f -mm 25 -mr 25 -F -MS 1 -MD 2 -b $path/bed_files/S3405393/DLBCL_final_comprehensive_panel_1_Covered.bed \
-        	$filename
-		echo $(echo $filename | cut -f 1 -d "_") deduplexing finished >> $path/log_files/$run.log.txt
-        done
+        	gatk --java-options "-Xmx12G" MarkDuplicates \
+        	--INPUT $bamfile \
+        	--OUTPUT $path/deduplexed_reads/$run/$(echo $bamfile | sed 's/sorted/duplicate_marked/') \
+        	--METRICS_FILE $path/deduplexed_reads/$run/$(echo $bamfile | sed 's/bam/metrics/') \
+        	--CREATE_INDEX true --ASSUME_SORTED true --TMP_DIR tmp --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500
+	done
 
-module unload agent
+module unload gatk
 
 echo DEDUPLEXING FINISHED ON $(date) >> $path/log_files/$run_log.txt
 
