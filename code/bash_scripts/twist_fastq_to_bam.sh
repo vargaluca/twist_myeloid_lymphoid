@@ -74,7 +74,7 @@ cd $path/trimmed_reads/$run
 	for read1 in *trimmed_R1.fastq.gz
 		do
 		header=$(zcat $read1 | head -n 1); id=$(echo $header | cut -f 3-4 -d ":" | sed 's/@//' | sed 's/:/./g')
-        	sample=$(echo $read1 | cut -b 1-13)
+        	sample=$(echo $read1 | cut -f 1 -d "_")
         	platform_unit=$(echo $header | cut -f 1,3,4 -d ":" | sed 's/@//' | sed 's/:/./g')
 
         	/disk/work/shared/tools/bwa/bwa mem -R $(echo "@RG\tID:$id\tPL:illumina\tPU:$platform_unit\tSM:$sample\tLB:$sample") -C -t 8 \
