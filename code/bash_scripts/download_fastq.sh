@@ -14,7 +14,7 @@ mv $path/raw_reads/$run/Undetermined* $path/raw_reads/$run/undetermined/
 
 cd $path/raw_reads/$run
 
-	for folder in PBL* TIS*
+	for folder in *
 		do
 		mv $folder/* .
 	done
