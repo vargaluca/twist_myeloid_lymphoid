@@ -14,6 +14,7 @@ xlsx='/disk/work/users/lv1/twist_myeloid_lymphoid/code/R'
 for maffile in *.maf.gz
 	do
 	name=$(echo $maffile | cut -f 1 -d ".")
+
 	zcat $maffile > $path/tables/$run/$(echo $maffile | cut -f 1 -d ".").table
 	$Rscript $xlsx/table_to_xlsx.R $path/tables/$run/$name.table $path/tables/$run/xlsx/$name.xlsx
 
