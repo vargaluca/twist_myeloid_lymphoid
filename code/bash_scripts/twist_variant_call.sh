@@ -126,8 +126,8 @@ mkdir -p $path/maf_files/$run
 		perl $vcf2maf --input-vcf $vcf \
         	--output-maf $path/maf_files/$run/$(echo $vcf | sed 's/annotated.vcf/maf/') \
         	--retain-info --retain-fmt \
-        	--tumor-id $(echo $vcf | cut -b 1-13) --inhibit-vep --tabix-exec $tabix \
-        	--ref-fasta $reference
+        	--tumor-id $(echo $vcf | cut -f 1 -d "_") --inhibit-vep --tabix-exec $tabix \
+        	--ref-fasta $reference --vcf-tumor-id $(echo $vcf | cut -f 1 -d "_")
 
         	gzip $path/maf_files/$run/$(echo $vcf | sed 's/annotated.vcf/maf/')
 		echo $(echo $bamfile | cut -f 1 -d "_") maf finished >> $path/log_files/$run.log.txt
@@ -136,4 +136,34 @@ mkdir -p $path/maf_files/$run
 module unload samtools
 module unload vcf2maf
 
-echo VARIANT CALLING AND MAF GENERATING FINISHED FOR $run ON $(date)
+mkdir -p $path/tables/$run
+cd $path/maf_files/$run
+
+## CREATING VARIANT TABLES
+
+Rscript='/disk/work/shared/tools/R/bin/Rscript'
+xlsx='/disk/work/users/lv1/twist_myeloid_lymphoid/code/R'
+
+for maffile in *.maf.gz
+        do
+        name=$(echo $maffile | cut -f 1 -d ".")
+
+#       zcat $maffile > $path/tables/$run/$(echo $maffile | cut -f 1 -d ".").table
+        $Rscript $xlsx/table_to_xlsx.R $path/maf_files/$run/$maffile $path/tables/$run/$name.xlsx
+
+        if [ -f $path/tables/$run/$name.xlsx ]
+        then
+                if [ -s $path/tables/$run/$name.xlsx ]
+                then
+                        echo "$name.xlsx successfully created" >> $path/log_files/$run.log.txt
+                else
+                        echo "$name.xlsx exists but is empty" >> $path/log_files/$run.log.txt
+                fi
+        else
+                echo "$name.xlsx doesn't exist" >> $path/log_files/$run.log.txt
+        fi
+done
+
+
+echo VARIANT TABLES FINISHED FOR $run ON $(date)
+
