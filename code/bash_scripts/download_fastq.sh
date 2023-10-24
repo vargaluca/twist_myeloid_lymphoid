@@ -16,7 +16,7 @@ cd $path/raw_reads/$run
 
 	for folder in *
 		do
-		mv $folder/* .
+		mv $folder/* $path/raw_reads/$run
 	done
 
 rmdir *
