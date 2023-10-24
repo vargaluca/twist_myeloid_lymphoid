@@ -8,6 +8,7 @@ read run
 
 ## RUNNING FASTQC ON RAW READS
 
+mkdir -p $path/tables/$run
 mkdir -p $path/log_files
 touch $path/log_files/$run.log.txt
 
@@ -21,7 +22,9 @@ cd $path/raw_reads/$run
         done
 
 cd $path/raw_fastqc/$run
-multiqc .
+multiqc . --filename $run-raw_multiqc
+
+mv $run-raw_multiqc.html $path/tables/$run/
 
 echo FASTQC AND MULTIQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
@@ -59,7 +62,8 @@ cd $path/trimmed_reads/$run
         done
 
 cd $path/trimmed_fastqc/$run
-multiqc .
+multiqc . --filename $run-trimmed_multiqc
+mv $run-trimmed_multiqc.html $path/tables/$run/
 
 echo TRIMMED FASTQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
@@ -125,7 +129,8 @@ covered='/disk/work/diagnostics/TWLM/lv1/twist_all_aml_diagnostics/bed_files/Tar
 
 cd $path/bam_qc/$run
 
-multiqc -n $path/bam_qc/$run/reports/$run.aml_all-multiqc --file-list file_paths.txt
+multiqc -n $path/bam_qc/$run/reports/$run.aml_all-bammultiqc --file-list file_paths.txt
+mv $path/bam_qc/$run/reports/$run.aml_all-bammultiqc.html $path/tables/$run/
 
 rm file_paths.txt
 module unload qualimap
