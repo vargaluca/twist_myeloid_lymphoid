@@ -7,7 +7,7 @@ args <- commandArgs(trailingOnly = T)
 file <- args[1]
 outfile <- args[2]
 
-maffile <- read.maf(file)
+maffile <- read.maf(list.files(path = files, pattern = "TIS", full.names = TRUE))
 gene_csv <- read_csv(
   "/disk/work/diagnostics/TWLM/lv1/twist_all_aml_diagnostics/bed_files/Twist_myeloid+lymphoid_genelist.csv", 
   col_names = T)
