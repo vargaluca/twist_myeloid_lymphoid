@@ -142,14 +142,15 @@ cd $path/maf_files/$run
 ## CREATING VARIANT TABLES
 
 Rscript='/disk/work/shared/tools/R/bin/Rscript'
-xlsx='/disk/work/users/lv1/twist_myeloid_lymphoid/code/R'
+xlsx='/disk/work/users/lv1/twist_myeloid_lymphoid/code/R/table_to_xlsx.R'
+combined='/disk/work/users/lv1/twist_myeloid_lymphoid/code/combined_table.R'
 
 for maffile in *.maf.gz
         do
         name=$(echo $maffile | cut -f 1 -d ".")
 
 #       zcat $maffile > $path/tables/$run/$(echo $maffile | cut -f 1 -d ".").table
-        $Rscript $xlsx/table_to_xlsx.R $path/maf_files/$run/$maffile $path/tables/$run/$name.xlsx
+        $Rscript $xlsx $path/maf_files/$run/$maffile $path/tables/$run/$name.xlsx
 
         if [ -f $path/tables/$run/$name.xlsx ]
         then
@@ -164,6 +165,7 @@ for maffile in *.maf.gz
         fi
 done
 
+$Rscript $combined $path/maf_files/$run/ $path/tables/$run/$run-combined_table.xlsx
 
 echo VARIANT TABLES FINISHED FOR $run ON $(date)
 
