@@ -11,7 +11,7 @@ mkdir -p $path/raw_reads/$run/undetermined
         --input-dir $path/bcl_files/$run/Data/Intensities/BaseCalls \
         --runfolder-dir $path/bcl_files/$run \
         --output-dir $path/raw_reads/$run \
-        --sample-sheet $path/bcl_files/$run/aml_all*SampleSheet_v2.csv
+        --sample-sheet $path/bcl_files/$run/aml_all*SampleSheet*.csv
 
 mv $path/raw_reads/$run/Undetermined* $path/raw_reads/$run/undetermined/
 
