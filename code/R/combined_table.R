@@ -11,7 +11,7 @@ mafs <- list.files(path = files, pattern = "maf.gz", full.names = TRUE)
 maffile <- merge_mafs(mafs = mafs)
 
 gene_csv <- read_csv(
-  "/disk/work/diagnostics/TWLM/lv1/twist_all_aml_diagnostics/bed_files/Twist_myeloid+lymphoid_genelist.csv", 
+  "/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/Twist_myeloid+lymphoid_genelist.csv", 
   col_names = T)
 genelist <- gene_csv$gene
 
