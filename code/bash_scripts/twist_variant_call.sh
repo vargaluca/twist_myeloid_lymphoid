@@ -5,10 +5,10 @@ read path
 echo run number:
 read run
 
-reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/ucsc.hg19.fasta.gz'
-germline='/disk/work/diagnostics/DLBC/lv1/DLBCL_genclass_K21/gnomad_somatic/af-only-gnomad.raw.sites.lifted_hg19.vcf'
-somatic='/disk/work/diagnostics/DLBC/lv1/DLBCL_genclass_K21/small_exac_common/small_exac_common_3.lifted_hg19.vcf'
-pon='/disk/work/diagnostics/DLBC/bb1/DLBCL_genclass_K21/variants/pon/gatk_wes_panel/Mutect2-exome-panel.hg19.vcf'
+reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa'
+germline='/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19.vcf'
+somatic='/disk/work/shared/data/gatk/small_exac_common/small_exac_common_3.hg19.vcf'
+pon='/disk/work/shared/data/gatk/pon/Mutect2-exome-panel.hg19.vcf'
 
 
 ## VARIANT CALLING USING GATK
@@ -82,6 +82,7 @@ echo GATK VARIANT CALLING FINISHED ON $(date)
 
 
 vep_annot='/disk/work/shared/data/vep'
+reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa'
 
 mkdir -p $path/annotation/$run
 cd $path/variant_calls/$run/filtered_vcf
@@ -111,10 +112,10 @@ echo VEP ANNOTATION FINISHED ON $(date)
 
 module load samtools
 module load vcf2maf
+module load tabix
 
 vcf2maf='/disk/work/shared/tools/vcf2maf/vcf2maf.pl'
-tabix='/work/shared/tools/ensembl-vep-release-106/htslib/tabix'
-reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/ucsc.hg19.fasta.gz'
+reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa'
 vep_exec='/disk/work/shared/tools/ensembl-vep'
 vep_data='/disk/work/shared/data/vep'
 
@@ -126,7 +127,7 @@ mkdir -p $path/maf_files/$run
 		perl $vcf2maf --input-vcf $vcf \
         	--output-maf $path/maf_files/$run/$(echo $vcf | sed 's/annotated.vcf/maf/') \
         	--retain-info --retain-fmt \
-        	--tumor-id $(echo $vcf | cut -f 1 -d "_") --inhibit-vep --tabix-exec $tabix \
+        	--tumor-id $(echo $vcf | cut -f 1 -d "_") --inhibit-vep \
         	--ref-fasta $reference --vcf-tumor-id $(echo $vcf | cut -f 1 -d "_")
 
         	gzip $path/maf_files/$run/$(echo $vcf | sed 's/annotated.vcf/maf/')
@@ -135,21 +136,22 @@ mkdir -p $path/maf_files/$run
 
 module unload samtools
 module unload vcf2maf
+module unload tabix
 
 mkdir -p $path/tables/$run
 cd $path/maf_files/$run
 
 ## CREATING VARIANT TABLES
 
-Rscript='/disk/work/shared/tools/R/bin/Rscript'
+Rscript='/disk/work/shared/tools/R-4.0.2/bin/Rscript'
 xlsx='/disk/work/users/lv1/twist_myeloid_lymphoid/code/R/table_to_xlsx.R'
-combined='/disk/work/users/lv1/twist_myeloid_lymphoid/code/combined_table.R'
+combined='/disk/work/users/lv1/twist_myeloid_lymphoid/code/R/combined_table.R'
 
 for maffile in *.maf.gz
         do
         name=$(echo $maffile | cut -f 1 -d ".")
 
-#       zcat $maffile > $path/tables/$run/$(echo $maffile | cut -f 1 -d ".").table
+#        zcat $maffile > $path/tables/$run/$(echo $maffile | cut -f 1 -d ".").table
         $Rscript $xlsx $path/maf_files/$run/$maffile $path/tables/$run/$name.xlsx
 
         if [ -f $path/tables/$run/$name.xlsx ]
