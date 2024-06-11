@@ -8,167 +8,167 @@ read run
 
 ## RUNNING FASTQC ON RAW READS
 
-mkdir -p $path/tables/$run
-mkdir -p $path/log_files
-touch $path/log_files/$run.log.txt
+#mkdir -p $path/tables/$run
+#mkdir -p $path/log_files
+#touch $path/log_files/$run.log.txt
 
-mkdir -p $path/raw_fastqc/$run
-cd $path/raw_reads/$run
+#mkdir -p $path/raw_fastqc/$run
+#cd $path/raw_reads/$run
 
-	for filename in *.fastq.gz
-	       	do
-		 /disk/work/shared/tools/FastQC/fastqc -o $path/raw_fastqc/$run $filename
-		echo $(echo $filename | cut -f 1 -d "_") fastqc finished >> $path/log_files/$run.log.txt
-        done
+#	for filename in *.fastq.gz
+#	       	do
+#		 /disk/work/shared/tools/FastQC/fastqc -o $path/raw_fastqc/$run $filename
+#		echo $(echo $filename | cut -f 1 -d "_") fastqc finished >> $path/log_files/$run.log.txt
+#        done
 
-cd $path/raw_fastqc/$run
-multiqc . --filename $run-raw_multiqc
+#cd $path/raw_fastqc/$run
+#multiqc . --filename $run-raw_multiqc
 
-mv $run-raw_multiqc.html $path/tables/$run/
+#mv $run-raw_multiqc.html $path/tables/$run/
 
-echo FASTQC AND MULTIQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo FASTQC AND MULTIQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## TRIMMING RAW READS WITH AGENT
 
 
-module load agent
+#module load agent
 
-mkdir -p $path/trimmed_reads/$run
-cd $path/raw_reads/$run
+#mkdir -p $path/trimmed_reads/$run
+#cd $path/raw_reads/$run
 
-	for read1 in *R1*.fastq.gz
-        	do
-		agent trim -v2 -out $path/trimmed_reads/$run/$(echo $read1 | sed 's/_L001_R1_001.fastq.gz/.trimmed/') \
-        	-fq1 $read1 \
-        	-fq2 $(echo $read1 | sed 's/R1/R2/')
-		echo $(echo $read1 | cut -f 1 -d "_") trimming finished >> $path/log_files/$run.log.txt
-        done
+#	for read1 in *R1*.fastq.gz
+#        	do
+#		agent trim -v2 -out $path/trimmed_reads/$run/$(echo $read1 | sed 's/_L001_R1_001.fastq.gz/.trimmed/') \
+#        	-fq1 $read1 \
+#        	-fq2 $(echo $read1 | sed 's/R1/R2/')
+#		echo $(echo $read1 | cut -f 1 -d "_") trimming finished >> $path/log_files/$run.log.txt
+#        done
 
-module unload agent
-echo TRIMMING FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#module unload agent
+#echo TRIMMING FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## RUNNING FASTQC ON TRIMMED READS
 
 
-mkdir -p $path/trimmed_fastqc/$run
-cd $path/trimmed_reads/$run
+#mkdir -p $path/trimmed_fastqc/$run
+#cd $path/trimmed_reads/$run
 
-	for filename in *.fastq.gz
-        	do
-		/disk/work/shared/tools/FastQC/fastqc -o $path/trimmed_fastqc/$run $filename
-		echo $(echo $filename | cut -f 1 -d "_") trimmed fastqc finished >> $path/log_files/$run.log.txt
-        done
+#	for filename in *.fastq.gz
+#        	do
+#		/disk/work/shared/tools/FastQC/fastqc -o $path/trimmed_fastqc/$run $filename
+#		echo $(echo $filename | cut -f 1 -d "_") trimmed fastqc finished >> $path/log_files/$run.log.txt
+#        done
 
-cd $path/trimmed_fastqc/$run
-multiqc . --filename $run-trimmed_multiqc
-mv $run-trimmed_multiqc.html $path/tables/$run/
+#cd $path/trimmed_fastqc/$run
+#multiqc . --filename $run-trimmed_multiqc
+#mv $run-trimmed_multiqc.html $path/tables/$run/
 
-echo TRIMMED FASTQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo TRIMMED FASTQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## ALIGNING TRIMMED FASTQ TO REFERENCE GENOME WITH BWA-MEM
 
 
-reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa.gz'
-mkdir -p $path/aligned_reads/$run
-cd $path/trimmed_reads/$run
+#reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa.gz'
+#mkdir -p $path/aligned_reads/$run
+#cd $path/trimmed_reads/$run
 
-	for read1 in *trimmed_R1.fastq.gz
-		do
-		header=$(zcat $read1 | head -n 1); id=$(echo $header | cut -f 3-4 -d ":" | sed 's/@//' | sed 's/:/./g')
-        	sample=$(echo $read1 | cut -f 1 -d "_")
-        	platform_unit=$(echo $header | cut -f 1,3,4 -d ":" | sed 's/@//' | sed 's/:/./g')
+#	for read1 in *trimmed_R1.fastq.gz
+#		do
+#		header=$(zcat $read1 | head -n 1); id=$(echo $header | cut -f 3-4 -d ":" | sed 's/@//' | sed 's/:/./g')
+#        	sample=$(echo $read1 | cut -f 1 -d "_")
+#        	platform_unit=$(echo $header | cut -f 1,3,4 -d ":" | sed 's/@//' | sed 's/:/./g')
 
-        	/disk/work/shared/tools/bwa/bwa mem -R $(echo "@RG\tID:$id\tPL:illumina\tPU:$platform_unit\tSM:$sample\tLB:$sample") -C -t 8 \
-		$reference $read1 \
-        	$(echo $read1 | sed 's/R1/R2/') | \
-	       	/disk/work/shared/tools/samtools/samtools view -b > $path/aligned_reads/$run/$(echo $read1 | sed 's/trimmed_R1.fastq.gz/aligned.bam/')
+#        	/disk/work/shared/tools/bwa/bwa mem -R $(echo "@RG\tID:$id\tPL:illumina\tPU:$platform_unit\tSM:$sample\tLB:$sample") -C -t 8 \
+#		$reference $read1 \
+#        	$(echo $read1 | sed 's/R1/R2/') | \
+#	       	/disk/work/shared/tools/samtools/samtools view -b > $path/aligned_reads/$run/$(echo $read1 | sed 's/trimmed_R1.fastq.gz/aligned.bam/')
 
-		echo $(echo $read1 | cut -f 1 -d "_") alignment to hg19 finished >> $path/log_files/$run.log.txt
-	done
+#		echo $(echo $read1 | cut -f 1 -d "_") alignment to hg19 finished >> $path/log_files/$run.log.txt
+#	done
 
 ## sorting .bam files using samtools
 
-cd $path/aligned_reads/$run
+#cd $path/aligned_reads/$run
 
-module load samtools
+#module load samtools
 
-	for bamfile in *.bam
-        	do
-        	samtools sort $bamfile -o $(echo $bamfile | cut -f 1 -d ".").sorted.bam
-		echo $(echo $bamfile | cut -f 1 -d "_") sorting finished >> $path/log_files/$run.log.txt
-	done
+#	for bamfile in *.bam
+#        	do
+#        	samtools sort $bamfile -o $(echo $bamfile | cut -f 1 -d ".").sorted.bam
+#		echo $(echo $bamfile | cut -f 1 -d "_") sorting finished >> $path/log_files/$run.log.txt
+#	done
 
 # line 100
-echo BWA-MEM ALIGNMENT FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo BWA-MEM ALIGNMENT FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 # creating bamqc and mutiqc for the bam files
 
-mkdir -p $path/bam_qc/$run
-cd $path/aligned_reads/$run
+#mkdir -p $path/bam_qc/$run
+#cd $path/aligned_reads/$run
 
-module load qualimap
+#module load qualimap
 
-covered='/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/Target_bases_covered_by_probes_Amplikon_LymphoidMyeloid_1X_TE-95491860_hg19.bed'
+#covered='/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/Target_bases_covered_by_probes_Amplikon_LymphoidMyeloid_1X_TE-95491860_hg19.bed'
 
-	for bamfile in *sorted.bam
-		do
-        	outdir=$(echo $bamfile | cut -f 1 -d ".")
-        	mkdir -p $path/bam_qc/$run/$outdir
+#	for bamfile in *sorted.bam
+#		do
+#        	outdir=$(echo $bamfile | cut -f 1 -d ".")
+#        	mkdir -p $path/bam_qc/$run/$outdir
 
-        	qualimap bamqc -bam $bamfile -outdir $path/bam_qc/$run/$outdir -gff $covered --java-mem-size=4G
+#        	qualimap bamqc -bam $bamfile -outdir $path/bam_qc/$run/$outdir -gff $covered --java-mem-size=4G
 
-        	mv $path/bam_qc/$run/$outdir/qualimapReport.html \
-        	$path/bam_qc/$run/$outdir/$(echo $bamfile | cut -f 1 -d ".").qualimapReport.html
-        	echo $path/bam_qc/$run/$outdir >> $path/bam_qc/$run/file_paths.txt
+#        	mv $path/bam_qc/$run/$outdir/qualimapReport.html \
+#        	$path/bam_qc/$run/$outdir/$(echo $bamfile | cut -f 1 -d ".").qualimapReport.html
+#        	echo $path/bam_qc/$run/$outdir >> $path/bam_qc/$run/file_paths.txt
 
-		echo $(echo $bamfile | cut -f 1 -d "_") bamqc finished >> $path/log_files/$run.log.txt
-	done
+#		echo $(echo $bamfile | cut -f 1 -d "_") bamqc finished >> $path/log_files/$run.log.txt
+#	done
 
-cd $path/bam_qc/$run
+#cd $path/bam_qc/$run
 
-multiqc -n $path/bam_qc/$run/reports/$run.aml_all-bammultiqc --file-list file_paths.txt
-mv $path/bam_qc/$run/reports/$run.aml_all-bammultiqc.html $path/tables/$run/
+#multiqc -n $path/bam_qc/$run/reports/$run.aml_all-bammultiqc --file-list file_paths.txt
+#mv $path/bam_qc/$run/reports/$run.aml_all-bammultiqc.html $path/tables/$run/
 
-rm file_paths.txt
-module unload qualimap
-module unload samtools
+#rm file_paths.txt
+#module unload qualimap
+#module unload samtools
 
-echo BAMQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo BAMQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## DEDUPLEXING ALIGNED BAM FILES
 
 
-mkdir -p $path/dedup_aligned_reads/$run
-mkdir -p $path/dedup_aligned_reads/tmp/$run
-cd $path/aligned_reads/$run
+#mkdir -p $path/dedup_aligned_reads/$run
+#mkdir -p $path/dedup_aligned_reads/tmp/$run
+#cd $path/aligned_reads/$run
 
-module load gatk
+#module load gatk
 
-	for bamfile in *sorted.bam
-        	do
-        	gatk --java-options "-Xmx12G" MarkDuplicates \
-        	--INPUT $bamfile \
-        	--OUTPUT $path/dedup_aligned_reads/$run/$(echo $bamfile | sed 's/sorted/duplicate_marked/') \
-        	--METRICS_FILE $path/dedup_aligned_reads/$run/$(echo $bamfile | sed 's/bam/metrics/') \
-        	--CREATE_INDEX true --ASSUME_SORTED true --TMP_DIR tmp --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500
-	done
+#	for bamfile in *sorted.bam
+#        	do
+#        	gatk --java-options "-Xmx12G" MarkDuplicates \
+#        	--INPUT $bamfile \
+#        	--OUTPUT $path/dedup_aligned_reads/$run/$(echo $bamfile | sed 's/sorted/duplicate_marked/') \
+#        	--METRICS_FILE $path/dedup_aligned_reads/$run/$(echo $bamfile | sed 's/bam/metrics/') \
+#        	--CREATE_INDEX true --ASSUME_SORTED true --TMP_DIR tmp --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500
+#	done
 
-module unload gatk
+#module unload gatk
 
-echo DEDUPLEXING FINISHED ON $(date) >> $path/log_files/$run_log.txt
+#echo DEDUPLEXING FINISHED ON $(date) >> $path/log_files/$run_log.txt
 
 
 ## BASESCORE RECALIBRATION IN BAM FILES
 
 
 reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa'
-known1='/disk/work/shared/data/gatk/hg19_bgz/1000G_phase1.indels.b37_corrected.vcf'
-known2='/disk/work/shared/data/gatk/hg19_bgz/Mills_and_1000G_gold_standard.indels.b37_corrected.vcf'
-known3='/disk/work/shared/data/gatk/hg19_bgz/dbsnp_138.b37_corrected.vcf'
+known1='/disk/work/shared/data/gatk/hg19_bgz/1000G_phase1.indels.hg19.vcf'
+known2='/disk/work/shared/data/gatk/hg19_bgz/Mills_and_1000G_gold_standard.indels.hg19.vcf'
+known3='/disk/work/shared/data/gatk/hg19_bgz/dbsnp_138.hg19.vcf'
 
 mkdir -p $path/recal_aligned_reads/$run
 cd $path/dedup_aligned_reads/$run
