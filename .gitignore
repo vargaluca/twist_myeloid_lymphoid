@@ -2,3 +2,36 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# data directories to exclude
+data/
+raw_data/
+analyses/
+._*
+code/snakefiles/
+
+# r stuff
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+*.rds
+*.pdf
+
+# linux backup and swap files
+*~
+*.swp
+*.save
+
+# office stuff
+.~lock.*#
+~$*.doc*
+~$*.xls*
+~$*.ppt*
+
+*.vcf
+*.vcf.gz
+*.vcf.gz.tbi
+*.fastq
+*.tsv
