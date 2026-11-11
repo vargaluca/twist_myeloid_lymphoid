@@ -7,7 +7,7 @@ read run
 
 mkdir -p $path/raw_reads/$run/undetermined
 
-/disk/work/shared/tools/bcl2fastq/bin/bcl2fastq \
+/disk/work/shared/tools/bcl2fastq2-2.20/bin/bin/bcl2fastq \
         --input-dir $path/bcl_files/$run/Data/Intensities/BaseCalls \
         --runfolder-dir $path/bcl_files/$run \
         --output-dir $path/raw_reads/$run \
