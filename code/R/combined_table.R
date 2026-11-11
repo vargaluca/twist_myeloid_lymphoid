@@ -5,13 +5,15 @@ library(maftools)
 
 args <- commandArgs(trailingOnly = T)
 files <- args[1]
+#files <- "/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/maf_files/run_20"
 outfile <- args[2]
+#outfile <- "/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/tables/run_20/run_20-combined_table.xlsx"
 
 mafs <- list.files(path = files, pattern = "maf.gz", full.names = TRUE)
 maffile <- merge_mafs(mafs = mafs)
 
 gene_csv <- read_csv(
-  "/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/Twist_myeloid+lymphoid_genelist.csv", 
+  "/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/updated_2024/Twist_myeloid+lymphoid_genlista_update_2407.csv", 
   col_names = T)
 genelist <- gene_csv$gene
 
