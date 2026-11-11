@@ -9,7 +9,7 @@ reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa'
 germline='/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19.vcf'
 somatic='/disk/work/shared/data/gatk/small_exac_common/small_exac_common_3.hg19.vcf'
 pon='/disk/work/shared/data/gatk/pon/Mutect2-exome-panel.hg19.vcf'
-
+covered='/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/updated_2024'
 
 ## VARIANT CALLING USING GATK
 
@@ -25,7 +25,8 @@ module load gatk
 	for bamfile in *.bam
                 do gatk Mutect2 -R $reference -I $bamfile --germline-resource $germline --panel-of-normals $pon \
                 --f1r2-tar-gz $path/variant_calls/$run/f1r2/$(echo $bamfile | cut -d "." -f 1)-f1r2.tar.gz \
-                -O $path/variant_calls/$run/unfiltered_vcf/$(echo $bamfile | cut -d "." -f 1).unfiltered.vcf.gz
+                -O $path/variant_calls/$run/unfiltered_vcf/$(echo $bamfile | cut -d "." -f 1).unfiltered.vcf.gz \
+		-L $covered/*.bed
 		echo $(echo $bamfile | cut -f 1 -d "_") mutect2 finished >> $path/log_files/$run.log.txt
                 done
 
