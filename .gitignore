@@ -2,13 +2,14 @@
 .Rhistory
 .RData
 .Ruserdata
+.snakemake
 
 # data directories to exclude
 data/
 raw_data/
 analyses/
 ._*
-code/snakefiles/
+code/snakefile/logs/
 
 # r stuff
 .Rhistory
