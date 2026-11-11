@@ -18,7 +18,7 @@ cd $path/raw_reads/$run
 	for filename in *.fastq.gz
 	       	do
 		 /disk/work/shared/tools/FastQC/fastqc -o $path/raw_fastqc/$run $filename
-		echo $(echo $filename | cut -f 1 -d "_") fastqc finished >> $path/log_files/$run.log.txt
+#		echo $(echo $filename | cut -f 1 -d "_") fastqc finished >> $path/log_files/$run.log.txt
         done
 
 cd $path/raw_fastqc/$run
@@ -26,7 +26,7 @@ multiqc . --filename $run-raw_multiqc
 
 mv $run-raw_multiqc.html $path/tables/$run/
 
-echo FASTQC AND MULTIQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo FASTQC AND MULTIQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## TRIMMING RAW READS WITH AGENT
@@ -42,15 +42,14 @@ cd $path/raw_reads/$run
 		agent trim -v2 -out $path/trimmed_reads/$run/$(echo $read1 | sed 's/_L001_R1_001.fastq.gz/.trimmed/') \
         	-fq1 $read1 \
         	-fq2 $(echo $read1 | sed 's/R1/R2/')
-		echo $(echo $read1 | cut -f 1 -d "_") trimming finished >> $path/log_files/$run.log.txt
+#		echo $(echo $read1 | cut -f 1 -d "_") trimming finished >> $path/log_files/$run.log.txt
         done
 
 module unload agent
-echo TRIMMING FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo TRIMMING FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## RUNNING FASTQC ON TRIMMED READS
-
 
 mkdir -p $path/trimmed_fastqc/$run
 cd $path/trimmed_reads/$run
@@ -58,14 +57,14 @@ cd $path/trimmed_reads/$run
 	for filename in *.fastq.gz
         	do
 		/disk/work/shared/tools/FastQC/fastqc -o $path/trimmed_fastqc/$run $filename
-		echo $(echo $filename | cut -f 1 -d "_") trimmed fastqc finished >> $path/log_files/$run.log.txt
+#		echo $(echo $filename | cut -f 1 -d "_") trimmed fastqc finished >> $path/log_files/$run.log.txt
         done
 
 cd $path/trimmed_fastqc/$run
 multiqc . --filename $run-trimmed_multiqc
 mv $run-trimmed_multiqc.html $path/tables/$run/
 
-echo TRIMMED FASTQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo TRIMMED FASTQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## ALIGNING TRIMMED FASTQ TO REFERENCE GENOME WITH BWA-MEM
@@ -86,7 +85,7 @@ cd $path/trimmed_reads/$run
         	$(echo $read1 | sed 's/R1/R2/') | \
 	       	/disk/work/shared/tools/samtools/samtools view -b > $path/aligned_reads/$run/$(echo $read1 | sed 's/trimmed_R1.fastq.gz/aligned.bam/')
 
-		echo $(echo $read1 | cut -f 1 -d "_") alignment to hg19 finished >> $path/log_files/$run.log.txt
+#		echo $(echo $read1 | cut -f 1 -d "_") alignment to hg19 finished >> $path/log_files/$run.log.txt
 	done
 
 ## sorting .bam files using samtools
@@ -98,11 +97,11 @@ module load samtools
 	for bamfile in *.bam
         	do
         	samtools sort $bamfile -o $(echo $bamfile | cut -f 1 -d ".").sorted.bam
-		echo $(echo $bamfile | cut -f 1 -d "_") sorting finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") sorting finished >> $path/log_files/$run.log.txt
 	done
 
 # line 100
-echo BWA-MEM ALIGNMENT FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo BWA-MEM ALIGNMENT FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 # creating bamqc and mutiqc for the bam files
 
@@ -110,9 +109,11 @@ mkdir -p $path/bam_qc/$run
 cd $path/aligned_reads/$run
 
 module load qualimap
-
+#twist bed file
 covered='/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/updated_2024'
 
+#illumina bed file
+#covered='/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/illumina_2026'
 	for bamfile in *sorted.bam
 		do
         	outdir=$(echo $bamfile | cut -f 1 -d ".")
@@ -124,7 +125,7 @@ covered='/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/update
         	$path/bam_qc/$run/$outdir/$(echo $bamfile | cut -f 1 -d ".").qualimapReport.html
         	echo $path/bam_qc/$run/$outdir >> $path/bam_qc/$run/file_paths.txt
 
-		echo $(echo $bamfile | cut -f 1 -d "_") bamqc finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") bamqc finished >> $path/log_files/$run.log.txt
 	done
 
 cd $path/bam_qc/$run
@@ -136,7 +137,7 @@ rm file_paths.txt
 module unload qualimap
 module unload samtools
 
-echo BAMQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo BAMQC FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 
 ## DEDUPLEXING ALIGNED BAM FILES
@@ -159,7 +160,7 @@ module load gatk
 
 module unload gatk
 
-echo DEDUPLEXING FINISHED ON $(date) >> $path/log_files/$run_log.txt
+#echo DEDUPLEXING FINISHED ON $(date) >> $path/log_files/$run_log.txt
 
 
 ## BASESCORE RECALIBRATION IN BAM FILES
@@ -177,28 +178,29 @@ module load gatk
 
 	for bamfile in *.bam
         	do
+
 		gatk BaseRecalibrator -I $bamfile -R $reference \
         	-O $path/recal_aligned_reads/$run/$(echo $bamfile | sed 's/duplicate_marked.bam/recal_data.table/') \
         	--known-sites $known1 \
         	--known-sites $known2 \
         	--known-sites $known3
-		echo $(echo $bamfile | cut -f 1 -d "_") recalibration table finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") recalibration table finished >> $path/log_files/$run.log.txt
         done
 
 
-echo RECALIBRATION TABLES FINISHED ON $(date) >> $path/log_files/$run.log.txt
+#echo RECALIBRATION TABLES FINISHED ON $(date) >> $path/log_files/$run.log.txt
 
 	for bamfile in *.bam
         	do
 		gatk ApplyBQSR -R $reference -I $bamfile \
         	--bqsr-recal-file $path/recal_aligned_reads/$run/$(echo $bamfile | sed 's/duplicate_marked.bam/recal_data.table/') \
         	-O $path/recal_aligned_reads/$run/$(echo $bamfile | sed 's/duplicate_marked.bam/recalibrated.bam/')
-		echo $(echo $bamfile | cut -f 1 -d "_") recalibrated >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") recalibrated >> $path/log_files/$run.log.txt
         done
 
 module unload gatk
 
-echo FASTQ TO RECALIBRATED BAM FOR $run COMPLETED ON $(date) >> $path/log_files/$run.log.txt
+#echo FASTQ TO RECALIBRATED BAM FOR $run COMPLETED ON $(date) >> $path/log_files/$run.log.txt
 
 
 reference='/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa'
@@ -216,13 +218,13 @@ cd $path/recal_aligned_reads/$run
 
 module load gatk
 
-##running mutect2 for variant calls
+## running mutect2 variant calls
 
 	for bamfile in *.bam
                 do gatk Mutect2 -R $reference -I $bamfile --germline-resource $germline --panel-of-normals $pon \
                 --f1r2-tar-gz $path/variant_calls/$run/f1r2/$(echo $bamfile | cut -d "." -f 1)-f1r2.tar.gz \
-                -O $path/variant_calls/$run/unfiltered_vcf/$(echo $bamfile | cut -d "." -f 1).unfiltered.vcf.gz
-		echo $(echo $bamfile | cut -f 1 -d "_") mutect2 finished >> $path/log_files/$run.log.txt
+                -L $covered/*bed -O $path/variant_calls/$run/unfiltered_vcf/$(echo $bamfile | cut -d "." -f 1).unfiltered.vcf.gz
+#		echo $(echo $bamfile | cut -f 1 -d "_") mutect2 finished >> $path/log_files/$run.log.txt
                 done
 
 echo UNFILTERED VCFs FINISHED ON $(date) >> $path/log_files/$run.log.txt
@@ -244,7 +246,7 @@ mkdir -p $path/variant_calls/$run/pileup_summaries
 	for bamfile in *.bam
 		do gatk GetPileupSummaries -I $bamfile -V $somatic -L $somatic \
 		-O $path/variant_calls/$run/pileup_summaries/$(echo $bamfile | cut -d "." -f 1)-pileupsummaries.table
-		echo $(echo $bamfile | cut -f 1 -d "_") pileupsummaries finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") pileupsummaries finished >> $path/log_files/$run.log.txt
 		done
 
 cd $path/variant_calls/$run/pileup_summaries
@@ -253,7 +255,7 @@ mkdir -p $path/variant_calls/$run/contamination
 	for pileup in *.table
 		do gatk CalculateContamination -I $pileup \
 		-O $path/variant_calls/$run/contamination/$(echo $pileup | sed 's/pileupsummaries/contamination/')
-		echo $(echo $bamfile | cut -f 1 -d "_") contamination finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") contamination finished >> $path/log_files/$run.log.txt
 		done
 
 ##filtering vcf files
@@ -266,7 +268,7 @@ mkdir -p $path/variant_calls/$run/filtered_vcf
 		--contamination-table $path/variant_calls/$run/contamination/$(echo $vcffile | cut -d "." -f 1)-contamination.table \
 		--ob-priors $path/variant_calls/$run/read_orientation_model/$(echo $vcffile | cut -d "." -f 1)-read-orientation-model.tar.gz \
 		-O $path/variant_calls/$run/filtered_vcf/$(echo $vcffile | sed 's/unfiltered/filtered/')
-		echo $(echo $bamfile | cut -f 1 -d "_") filtered vcf finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") filtered vcf finished >> $path/log_files/$run.log.txt
 		done
 
 module unload gatk
@@ -289,13 +291,18 @@ module load vep
         	do
 		outfile=$(echo $vcffile | sed 's/filtered/annotated/')
 
-        	vep --dir_cache $vep_annot --cache --fasta $reference --offline --everything -i $vcffile \
+        	vep --dir_cache $vep_annot --cache --fasta $reference --offline -i $vcffile \
         	--vcf --pick --force_overwrite --assembly GRCh37 --fork 8 \
+		--failed 1 --sift b \
+                --polyphen b --ccds --hgvs --symbol --numbers --domains --regulatory \
+                --canonical --protein --biotype --af --af_1kg --max_af --pubmed \
+                --uniprot --variant_class --gene_phenotype \
+                --custom file=/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19_2.vcf.gz,short_name=gnomadAF,format=vcf,type=exact,fields=AC%AF \
         	-o $path/annotation/$run/$outfile
 
         	mv $path/annotation/$run/$outfile \
         	$path/annotation/$run/$(echo $outfile | sed 's/vcf.gz/vcf/')
-		echo $(echo $bamfile | cut -f 1 -d "_") annotation finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") annotation finished >> $path/log_files/$run.log.txt
 	done
 
 module unload vep
@@ -322,12 +329,12 @@ mkdir -p $path/maf_files/$run
         	do
 		perl $vcf2maf --input-vcf $vcf \
         	--output-maf $path/maf_files/$run/$(echo $vcf | sed 's/annotated.vcf/maf/') \
-        	--retain-info --retain-fmt \
+        	--retain-fmt --retain-ann gnomadAF_AC,gnomadAF_AF \
         	--tumor-id $(echo $vcf | cut -f 1 -d "_") --inhibit-vep \
         	--ref-fasta $reference --vcf-tumor-id $(echo $vcf | cut -f 1 -d "_")
 
         	gzip $path/maf_files/$run/$(echo $vcf | sed 's/annotated.vcf/maf/')
-		echo $(echo $bamfile | cut -f 1 -d "_") maf finished >> $path/log_files/$run.log.txt
+#		echo $(echo $bamfile | cut -f 1 -d "_") maf finished >> $path/log_files/$run.log.txt
         done
 
 module unload samtools
@@ -350,17 +357,17 @@ for maffile in *.maf.gz
 #        zcat $maffile > $path/tables/$run/$(echo $maffile | cut -f 1 -d ".").table
         $Rscript $xlsx $path/maf_files/$run/$maffile $path/tables/$run/$name.xlsx
 
-        if [ -f $path/tables/$run/$name.xlsx ]
-        then
-                if [ -s $path/tables/$run/$name.xlsx ]
-                then
-                        echo "$name.xlsx successfully created" >> $path/log_files/$run.log.txt
-                else
-                        echo "$name.xlsx exists but is empty" >> $path/log_files/$run.log.txt
-                fi
-        else
-                echo "$name.xlsx doesn't exist" >> $path/log_files/$run.log.txt
-        fi
+#        if [ -f $path/tables/$run/$name.xlsx ]
+#        then
+#                if [ -s $path/tables/$run/$name.xlsx ]
+#                then
+#                        echo "$name.xlsx successfully created" >> $path/log_files/$run.log.txt
+#                else
+#                        echo "$name.xlsx exists but is empty" >> $path/log_files/$run.log.txt
+#                fi
+#        else
+#                echo "$name.xlsx doesn't exist" >> $path/log_files/$run.log.txt
+#        fi
 done
 
 $Rscript $combined $path/maf_files/$run/ $path/tables/$run/$run-combined_table.xlsx
