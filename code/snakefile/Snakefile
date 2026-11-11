@@ -1,0 +1,307 @@
+## complete Snakemake script for myeloid-lymphoid twist panel analysis
+
+import glob
+
+SAMPLES = glob_wildcards('data/raw_reads/{sample}.fastq.gz').sample
+NAMES = glob_wildcards('data/raw_reads/{name}_L001_R1_001.fastq.gz').name
+
+rule all:
+	input:
+#		expand("data/raw_fastqc/{sample}_fastqc.html", sample=SAMPLES),
+		"data/raw_fastqc/raw_multiqc.html",
+#                expand("data/trimmed_fastqc/{name}.trimmed_R1_fastqc.html", name=NAMES),
+#                expand("data/trimmed_fastqc/{name}.trimmed_R2_fastqc.html", name=NAMES),
+		"data/trimmed_fastqc/trimmed_multiqc.html",
+		expand("data/aligned_reads/{name}_aligned.bam", name=NAMES),
+		expand("data/aligned_reads/{name}_sorted.bam", name=NAMES),
+		expand("data/tables/{name}.xlsx", name=NAMES),
+		"data/tables/combined-table.xlsx"
+
+rule fastqc:
+	output:
+		zip = "data/raw_fastqc/{sample}_fastqc.zip",
+		html = "data/raw_fastqc/{sample}_fastqc.html"
+	input: 
+		"data/raw_reads/{sample}.fastq.gz"
+	shell:
+		"""
+		/disk/work/shared/tools/FastQC/fastqc -o data/raw_fastqc {input}
+		"""
+
+rule multiqc:
+	output:
+		"data/raw_fastqc/raw_multiqc.html"
+	input:
+		expand("data/raw_fastqc/{sample}_fastqc.html", sample=SAMPLES)
+	shell:
+		"""
+		multiqc -f data/raw_fastqc/ --filename {output}
+		"""
+
+rule trim:
+	output:
+		R1 = "data/trimmed_reads/{name}.trimmed_R1.fastq.gz",
+		R2 = "data/trimmed_reads/{name}.trimmed_R2.fastq.gz"
+	input:
+		R1 = "data/raw_reads/{name}_L001_R1_001.fastq.gz",
+		R2 = "data/raw_reads/{name}_L001_R2_001.fastq.gz"
+	envmodules:
+		"agent"
+	shell:
+		"""
+		agent trim -v2 -out data/trimmed_reads/{wildcards.name}.trimmed -fq1 {input.R1} -fq2 {input.R2}
+		"""	
+
+rule fastqc2:
+        output:
+                zip1 = "data/trimmed_fastqc/{name}.trimmed_R1_fastqc.zip",
+                html1 = "data/trimmed_fastqc/{name}.trimmed_R1_fastqc.html",
+		zip2 = "data/trimmed_fastqc/{name}.trimmed_R2_fastqc.zip",
+                html2 = "data/trimmed_fastqc/{name}.trimmed_R2_fastqc.html"
+
+        input:
+                R1 = "data/trimmed_reads/{name}.trimmed_R1.fastq.gz",
+		R2 = "data/trimmed_reads/{name}.trimmed_R2.fastq.gz"
+        shell:
+                """
+                /disk/work/shared/tools/FastQC/fastqc -o /disk/work/users/lv1/twist_myeloid_lymphoid/snakefile/data/trimmed_fastqc {input}
+                """
+
+rule multiqc2:
+        output:
+                "data/trimmed_fastqc/trimmed_multiqc.html"
+        input:
+                expand("data/trimmed_fastqc/{name}.trimmed_R1_fastqc.html", name=NAMES),
+		expand("data/trimmed_fastqc/{name}.trimmed_R2_fastqc.html", name=NAMES)
+        shell:
+                """
+                multiqc -f data/trimmed_fastqc/ --filename {output}
+                """
+
+import gzip
+
+def read_group(wildcards, input):
+    with gzip.open(input.R1, "rt") as f:
+        header = f.readline().strip()          # @instrument:run:flowcell:lane:tile:x:y
+    fields = header.lstrip("@").split(" ")[0].split(":")  # same as cut -f 3-4 (flowcell.lane) and cut -f 1,3,4 (instrument.flowcell.lane)
+    rg_id = f"{fields[2]}.{fields[3]}"
+    pu    = f"{fields[0]}.{fields[2]}.{fields[3]}"
+    name = wildcards.name
+    return rf"@RG\tID:{rg_id}\tPL:illumina\tPU:{pu}\tSM:{name}\tLB:{name}"
+
+rule align:
+	output:
+                "data/aligned_reads/{name}_aligned.bam"
+	input:
+		R1  = "data/trimmed_reads/{name}.trimmed_R1.fastq.gz",
+		R2  = "data/trimmed_reads/{name}.trimmed_R2.fastq.gz"
+	params:
+		rg = read_group
+	envmodules:
+		"bwa",
+		"samtools"
+	shell:
+		"""
+		/disk/work/shared/tools/bwa/bwa mem -R '{params.rg}' -C -t 4 \
+		/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa.gz {input.R1} {input.R2} | \
+		/disk/work/shared/tools/samtools/samtools view -b > {output}
+		"""
+
+rule sort:
+	output:
+		"data/aligned_reads/{name}_sorted.bam"
+	input:
+		"data/aligned_reads/{name}_aligned.bam"
+	envmodules:
+		"samtools"
+	shell:
+		"""
+		samtools sort {input} -o {output}
+		"""
+
+rule deduplicate:
+	output:
+		bam = "data/dedup_aligned_reads/{name}.duplicate_marked.bam",
+		metrics = "data/dedup_aligned_reads/{name}.duplicate_marked.metrics"
+	input:
+		"data/aligned_reads/{name}_sorted.bam"
+	shell:
+		"""
+		module load gatk
+		gatk --java-options "-Xmx12G" MarkDuplicates \
+		--INPUT {input} \
+		--OUTPUT {output.bam} \
+		--METRICS_FILE {output.metrics} \
+		--CREATE_INDEX true --ASSUME_SORTED true --TMP_DIR tmp --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500
+		"""
+
+rule recal_table:
+	output:
+		"data/recal_aligned_reads/{name}.recal_data.table"
+	input:
+		"data/dedup_aligned_reads/{name}.duplicate_marked.bam"
+	shell:
+		"""
+		module load gatk
+		gatk BaseRecalibrator -I {input} -R  /disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa \
+		-O {output} --known-sites /disk/work/shared/data/gatk/hg19_bgz/1000G_phase1.indels.hg19.vcf \
+		--known-sites /disk/work/shared/data/gatk/hg19_bgz/Mills_and_1000G_gold_standard.indels.hg19.vcf \
+		--known-sites /disk/work/shared/data/gatk/hg19_bgz/dbsnp_138.hg19.vcf
+		"""
+
+rule applybqsr:
+	output: 
+		"data/recal_aligned_reads/{name}.recalibrated.bam"
+	input:
+		table = "data/recal_aligned_reads/{name}.recal_data.table",
+		bam = "data/dedup_aligned_reads/{name}.duplicate_marked.bam"
+	log:
+		"logs/applybqsr/{name}.log"
+	shell:
+		"""
+		module load gatk
+		gatk --java-options "-Xmx12G" ApplyBQSR \
+		-R /disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa \
+		-I {input.bam} \
+		--bqsr-recal-file {input.table} -O {output} --tmp-dir tmp
+		"""
+
+rule mutect2:
+	output:
+		f1r2 = "data/variant_calls/f1r2/{name}-f1r2.tar.gz",
+		vcf = "data/variant_calls/unfiltered_vcf/{name}.unfiltered.vcf.gz"
+	input:
+		"data/recal_aligned_reads/{name}.recalibrated.bam"
+	shell:
+		"""
+		module load gatk
+		gatk Mutect2 -R /disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa -I {input} \
+		--germline-resource /disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19.vcf \
+		--panel-of-normals /disk/work/shared/data/gatk/pon/Mutect2-exome-panel.hg19.vcf \
+		--f1r2-tar-gz {output.f1r2} \
+		-L /disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/updated_2024/Target_bases_covered_by_probes_Amplikon_LymphoidMyeloid_1X_TE-95491860_hg19.bed \
+		-O {output.vcf}
+		"""
+
+rule readorientation:
+	output:
+		"data/variant_calls/read_orientation_model/{name}-read-orientation-model.tar.gz"
+	input:
+		"data/variant_calls/f1r2/{name}-f1r2.tar.gz"
+	envmodules:
+		"gatk"
+	shell:
+		"""
+		gatk LearnReadOrientationModel -I {input} -O {output}
+		"""
+
+rule pileup:
+	output:
+		"data/variant_calls/pileup_summaries/{name}-pileupsummaries.table"
+	input:
+		"data/recal_aligned_reads/{name}.recalibrated.bam"
+	envmodules:
+		"gatk"
+	shell:
+		"""
+		gatk GetPileupSummaries -I {input} \
+		-V /disk/work/shared/data/gatk/small_exac_common/small_exac_common_3.hg19.vcf \
+		-L /disk/work/shared/data/gatk/small_exac_common/small_exac_common_3.hg19.vcf \
+		-O {output}
+		"""
+
+rule contamination:
+	output:
+		"data/variant_calls/contamination/{name}-contamination.table"
+	input:
+		pileup = "data/variant_calls/pileup_summaries/{name}-pileupsummaries.table"
+	envmodules:
+		"gatk"
+	shell:
+		"""
+		gatk CalculateContamination -I {input} -O {output}
+		"""
+
+rule filter:
+	output: 
+		"data/variant_calls/filtered_vcf/{name}.filtered.vcf.gz"
+	input:
+		vcf = "data/variant_calls/unfiltered_vcf/{name}.unfiltered.vcf.gz",
+		contamination = "data/variant_calls/contamination/{name}-contamination.table",
+		readorientation = "data/variant_calls/read_orientation_model/{name}-read-orientation-model.tar.gz"
+	envmodules:
+		"gatk"
+	shell:
+		"""
+		module load gatk
+		gatk FilterMutectCalls -R /disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa \
+		-V {input.vcf} --contamination-table {input.contamination} --ob-priors {input.readorientation} \
+		-O {output}
+		"""
+
+rule annotation:
+	output:
+		"data/annotation/{name}.annotated.vcf"
+	input:
+		"data/variant_calls/filtered_vcf/{name}.filtered.vcf.gz"
+	envmodules:
+		"vep"
+	shell:
+		"""
+		module load vep
+		vep --dir_cache /disk/work/shared/data/vep --cache \
+		--fasta /disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa --offline -i {input} \
+                --vcf --pick --force_overwrite --assembly GRCh37 --fork 8 \
+                --failed 1 --sift b \
+                --polyphen b --ccds --hgvs --symbol --numbers --domains --regulatory \
+                --canonical --protein --biotype --af --af_1kg --max_af --pubmed \
+                --uniprot --variant_class --gene_phenotype \
+                --custom file=/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19_2.vcf.gz,short_name=gnomadAF,format=vcf,type=exact,fields=AC%AF \
+                -o {output}
+		"""
+
+rule maf:
+	output:
+		"data/maf_files/{name}.annotated.maf.gz"
+	input:
+		"data/annotation/{name}.annotated.vcf"
+	envmodules:
+		"samtools",
+		"vcf2maf",
+		"tabix"
+	shell:
+		"""
+		module load samtools
+		module load vcf2maf
+		module load tabix
+		perl /disk/work/shared/tools/vcf2maf/vcf2maf.pl --input-vcf {input} --output-maf {output} \
+		--retain-fmt --retain-ann gnomadAF_AC,gnomadAF_AF \
+		--tumor-id {wildcards.name} --inhibit-vep \
+		--ref-fasta /disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa
+
+		gzip {output}
+		"""
+
+rule xlsx:
+	output:
+		"data/tables/{name}.xlsx"
+	input:
+		"data/maf_files/{name}.annotated.maf.gz"
+	shell:
+		"""
+		/disk/work/shared/tools/R-4.0.2/bin/Rscript \
+		/disk/work/users/lv1/twist_myeloid_lymphoid/code/R/table_to_xlsx.R \
+		{input} {output}
+		"""
+
+rule combined:
+	output:
+		"data/tables/combined-table.xlsx"
+	input:
+		expand("data/maf_files/{name}.annotated.maf.gz", name=NAMES)
+	shell:
+		"""
+		/disk/work/shared/tools/R-4.0.2/bin/Rscript \
+		/disk/work/users/lv1/twist_myeloid_lymphoid/code/R/combined_table.R \
+		data/maf_files {output}
+		"""
