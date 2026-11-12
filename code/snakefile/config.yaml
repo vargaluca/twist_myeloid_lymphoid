@@ -5,5 +5,6 @@ gatk_mills: "/disk/work/shared/data/gatk/hg19_bgz/Mills_and_1000G_gold_standard.
 gatk_dbsnp: "/disk/work/shared/data/gatk/hg19_bgz/dbsnp_138.hg19.vcf"
 bed: "/disk/work/diagnostics/TWLM/lv1/twist_myeloid_lymphoid/bed_files/updated_2024/Target_bases_covered_by_probes_Amplikon_LymphoidMyeloid_1X_TE-95491860_hg19.bed"
 gnomad: "/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19.vcf"
+gnomad_gz: "/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19_2.vcf.gz"
 mutect2_exomes: "/disk/work/shared/data/gatk/pon/Mutect2-exome-panel.hg19.vcf"
 gatk_small_exac: "/disk/work/shared/data/gatk/small_exac_common/small_exac_common_3.hg19.vcf"
