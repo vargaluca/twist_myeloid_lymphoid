@@ -6,7 +6,7 @@ import gzip
 
 #getting specific wildcards for the run
 RUN = config.get("run", "run1")
-SAMPLES = glob_wildcards(f"raw_reads/{RUN}/{{sample}}.fastq.gz").sample
+#SAMPLES = glob_wildcards(f"raw_reads/{RUN}/{{sample}}.fastq.gz").sample
 NAMES = glob_wildcards(f"raw_reads/{RUN}/{{name}}_L001_R1_001.fastq.gz").name
 WORKDIR = os.getcwd()
 SNAKEDIR = workflow.basedir
@@ -15,7 +15,7 @@ SNAKEDIR = workflow.basedir
 IGNORE_PREFIX = ("Undetermined", "Kontroll", "Control", "control", "kontroll")
 
 NAMES   = [n for n in NAMES   if not n.startswith(IGNORE_PREFIX)]
-SAMPLES = [s for s in SAMPLES if not s.startswith(IGNORE_PREFIX)]
+#SAMPLES = [s for s in SAMPLES if not s.startswith(IGNORE_PREFIX)]
 
 #endpoint files
 rule all:
@@ -28,14 +28,24 @@ rule all:
 
 ## pipeline rules
 
+#to show whole process in the DAG
+rule raw_reads:
+	output: 
+		expand("raw_reads/{run}/{name}_L001_R1_001.fastq.gz", name=NAMES, run=RUN),
+                expand("raw_reads/{run}/{name}_L001_R2_001.fastq.gz", name=NAMES, run=RUN)
+	shell:
+		"false"
+
+#actual rules
 rule raw_fastqc:
 	output:
-		zip = "raw_fastqc/{run}/{sample}_fastqc.zip",
-		html = "raw_fastqc/{run}/{sample}_fastqc.html"
+		html1 = temp("raw_fastqc/{run}/{name}_L001_R1_001_fastqc.html"),
+		html2 = temp("raw_fastqc/{run}/{name}_L001_R2_001_fastqc.html")
 	input: 
-		"raw_reads/{run}/{sample}.fastq.gz"
+		R1 = "raw_reads/{run}/{name}_L001_R1_001.fastq.gz",
+		R2 = "raw_reads/{run}/{name}_L001_R2_001.fastq.gz"
 	log:
-		"/disk/work/users/lv1/twist_myeloid_lymphoid/code/snakefile/logs/{run}.log"
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		/disk/work/shared/tools/FastQC/fastqc -o raw_fastqc/{wildcards.run}/ {input} >> {log} 2>&1
@@ -45,62 +55,56 @@ rule raw_multiqc:
 	output:
 		"tables/{run}/raw_multiqc.html"
 	input:
-		expand("raw_fastqc/{run}/{sample}_fastqc.html", sample=SAMPLES, run=RUN)
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+		expand("raw_fastqc/{run}/{name}_L001_R1_001_fastqc.html", name=NAMES, run=RUN),
+		expand("raw_fastqc/{run}/{name}_L001_R2_001_fastqc.html", name=NAMES, run=RUN)
 	shell:
 		"""
 		multiqc -f raw_fastqc/{wildcards.run}/ --filename raw_fastqc/{wildcards.run}/raw_multiqc.html
-		mv raw_fastqc/{wildcards.run}/raw_multiqc.html tables/{wildcards.run}/ >> {log} 2>&1
+		mv raw_fastqc/{wildcards.run}/raw_multiqc.html tables/{wildcards.run}/
 		"""
 
-rule trim:
+rule trim_reads:
 	output:
-		R1 = "trimmed_reads/{run}/{name}.trimmed_R1.fastq.gz",
-		R2 = "trimmed_reads/{run}/{name}.trimmed_R2.fastq.gz"
+		R1 = temp("trimmed_reads/{run}/{name}.trimmed_R1.fastq.gz"),
+		R2 = temp("trimmed_reads/{run}/{name}.trimmed_R2.fastq.gz")
 	input:
 		R1 = "raw_reads/{run}/{name}_L001_R1_001.fastq.gz",
 		R2 = "raw_reads/{run}/{name}_L001_R2_001.fastq.gz"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load agent
 		agent trim -v2 -out trimmed_reads/{wildcards.run}/{wildcards.name}.trimmed -fq1 {input.R1} -fq2 {input.R2} >> {log} 2>&1
 		"""	
 
-rule fastqc2:
-        output:
-                zip1 = "trimmed_fastqc/{run}/{name}.trimmed_R1_fastqc.zip",
-                html1 = "trimmed_fastqc/{run}/{name}.trimmed_R1_fastqc.html",
-		zip2 = "trimmed_fastqc/{run}/{name}.trimmed_R2_fastqc.zip",
-                html2 = "trimmed_fastqc/{run}/{name}.trimmed_R2_fastqc.html"
-
-        input:
-                R1 = "trimmed_reads/{run}/{name}.trimmed_R1.fastq.gz",
+rule trimmed_fastqc:
+	output:
+		html1 = temp("trimmed_fastqc/{run}/{name}.trimmed_R1_fastqc.html"),
+		html2 = temp("trimmed_fastqc/{run}/{name}.trimmed_R2_fastqc.html")
+	input:
+		R1 = "trimmed_reads/{run}/{name}.trimmed_R1.fastq.gz",
 		R2 = "trimmed_reads/{run}/{name}.trimmed_R2.fastq.gz"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
-        shell:
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
+	shell:
                 """
                 /disk/work/shared/tools/FastQC/fastqc -o trimmed_fastqc/{wildcards.run}/ {input} >> {log} 2>&1
                 """
 
-rule multiqc2:
+rule trimmed_multiqc:
         output:
                 "tables/{run}/trimmed_multiqc.html"
         input:
                 expand("trimmed_fastqc/{run}/{name}.trimmed_R1_fastqc.html", name=NAMES, run=RUN),
 		expand("trimmed_fastqc/{run}/{name}.trimmed_R2_fastqc.html", name=NAMES, run=RUN)
-        log:
-                SNAKEDIR + "/logs/{run}.log"
-        shell:
+	shell:
                 """
-                multiqc -f trimmed_fastqc/{wildcards.run} --filename trimmed_fastqc/{wildcards.run}/trimmed_multiqc.html >> {log} 2>&1
+                multiqc -f trimmed_fastqc/{wildcards.run} --filename trimmed_fastqc/{wildcards.run}/trimmed_multiqc.html
 		mv trimmed_fastqc/{wildcards.run}/trimmed_multiqc.html tables/{wildcards.run}/
                 """
 
-#function for defining read group info for each sample (called in rule align params)
+#function for defining read group info for each sample (called in rule align_reads params)
 def read_group(wildcards, input):
     with gzip.open(input.R1, "rt") as f:
         header = f.readline().strip()          # @instrument:run:flowcell:lane:tile:x:y
@@ -110,34 +114,34 @@ def read_group(wildcards, input):
     name = wildcards.name
     return rf"@RG\tID:{rg_id}\tPL:illumina\tPU:{pu}\tSM:{name}\tLB:{name}"
 
-rule align:
+rule align_reads:
 	output:
-                "aligned_reads/{run}/{name}_aligned.bam"
+                temp("aligned_reads/{run}/{name}_aligned.bam")
 	input:
 		R1  = "trimmed_reads/{run}/{name}.trimmed_R1.fastq.gz",
 		R2  = "trimmed_reads/{run}/{name}.trimmed_R2.fastq.gz"
 	params:
 		rg = read_group,
 		reference = config["reffasta_gz"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load samtools
 		module load bwa
 
 		/disk/work/shared/tools/bwa/bwa mem -R '{params.rg}' -C -t 4 \
-		{params.reference} {input.R1} {input.R2} | \
-		/disk/work/shared/tools/samtools/samtools view -b > {output} >> {log} 2>&1
+		{params.reference} {input.R1} {input.R2} 2> {log} | \
+		/disk/work/shared/tools/samtools/samtools view -b > {output}
 		"""
 
-rule sort:
+rule sort_aligned:
 	output:
-		"aligned_reads/{run}/{name}_sorted.bam"
+		temp("aligned_reads/{run}/{name}_sorted.bam")
 	input:
 		"aligned_reads/{run}/{name}_aligned.bam"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load samtools
@@ -145,14 +149,14 @@ rule sort:
 		samtools sort {input} -o {output} >> {log} 2>&1
 		"""
 
-rule deduplicate:
+rule mark_duplicates:
 	output:
-		bam = "dedup_aligned_reads/{run}/{name}.duplicate_marked.bam",
-		metrics = "dedup_aligned_reads/{run}/{name}.duplicate_marked.metrics"
+		bam = temp("dedup_aligned_reads/{run}/{name}.duplicate_marked.bam"),
+		metrics = temp("dedup_aligned_reads/{run}/{name}.duplicate_marked.metrics")
 	input:
 		"aligned_reads/{run}/{name}_sorted.bam"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -164,9 +168,54 @@ rule deduplicate:
 		--CREATE_INDEX true --ASSUME_SORTED true --TMP_DIR tmp --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500 >> {log} 2>&1
 		"""
 
-rule recal_table:
+rule deduplicated_bamqc:
 	output:
-		"recal_aligned_reads/{run}/{name}.recal_data.table"
+		temp("bam_qc/{run}/{name}/{name}.qualimapReport.html")
+	input:
+		"dedup_aligned_reads/{run}/{name}.duplicate_marked.bam"
+	params:
+		outdir = "bam_qc/{run}/{name}",
+		bed = config["bed"]
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
+	shell:
+		"""
+		module load qualimap
+
+		qualimap bamqc -bam {input} -outdir {params.outdir} \
+		-gff {params.bed} --java-mem-size=4G >> {log} 2>&1
+
+		mv {params.outdir}/qualimapReport.html {output}
+		"""
+
+rule bamqc_paths:
+    input:
+        lambda wc: expand("bam_qc/{run}/{name}/{name}.qualimapReport.html",
+                          run=wc.run, name=NAMES)
+    output:
+        temp("bam_qc/{run}/file_paths.txt")
+    run:
+        with open(output[0], "w") as f:
+            for p in input:
+                f.write(os.path.dirname(p) + "\n")
+
+rule bam_multiqc:
+	output:
+		"tables/{run}/bam_multiqc.html"
+	input:
+		bams = expand("bam_qc/{run}/{name}/{name}.qualimapReport.html", run=RUN, name=NAMES),
+		paths = "bam_qc/{run}/file_paths.txt"
+	shell:
+		"""
+		multiqc -n bam_qc/{wildcards.run}/bam_multiqc.html \
+		--file-list {input.paths}
+
+		mv bam_qc/{wildcards.run}/bam_multiqc.html "tables/{wildcards.run}/bam_multiqc.html"
+                """
+
+rule recalibrate_table:
+	output:
+		temp("recal_aligned_reads/{run}/{name}.recal_data.table")
 	input:
 		"dedup_aligned_reads/{run}/{name}.duplicate_marked.bam"
 	params:
@@ -174,8 +223,8 @@ rule recal_table:
 		known1 = config["gatk_1000G"],
 		known2 = config["gatk_mills"],
 		known3 = config["gatk_dbsnp"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -186,16 +235,16 @@ rule recal_table:
 		--known-sites {params.known3} >> {log} 2>&1
 		"""
 
-rule applybqsr:
+rule apply_recalibration:
 	output: 
-		"recal_aligned_reads/{run}/{name}.recalibrated.bam"
+		protected("recal_aligned_reads/{run}/{name}.recalibrated.bam")
 	input:
 		table = "recal_aligned_reads/{run}/{name}.recal_data.table",
 		bam = "dedup_aligned_reads/{run}/{name}.duplicate_marked.bam"
 	params:
 		reference = config["reffasta"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -206,58 +255,10 @@ rule applybqsr:
 		--bqsr-recal-file {input.table} -O {output} --tmp-dir tmp >> {log} 2>&1
 		"""
 
-rule qualimap:
+rule variant_calling:
 	output:
-		"bam_qc/{run}/{name}/{name}.qualimapReport.html"
-	input:
-		"recal_aligned_reads/{run}/{name}.recalibrated.bam"
-	params:
-		outdir = "bam_qc/{run}/{name}",
-		bed = config["bed"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
-	shell:
-		"""
-		module load qualimap
-		
-		qualimap bamqc -bam {input} -outdir {params.outdir} \
-		-gff {params.bed} --java-mem-size=4G >> {log} 2>&1
-		
-		mv {params.outdir}/qualimapReport.html {output}
-		"""
-
-rule bamqc_paths:
-	input:
-		lambda wc: expand("bam_qc/{run}/{name}/{name}.qualimapReport.html",
-		run=wc.run, name=NAMES)
-	output:
-		"bam_qc/{run}/file_paths.txt"
-	run:
-	with open(output[0], "w") as f:
-		for p in input:
-			f.write(os.path.dirname(p) + "\n")
-
-rule multiqc3:
-	output:
-		"tables/{run}/bam_multiqc.html"
-	
-	input:
-		bams = expand("bam_qc/{run}/{name}/{name}.qualimapReport.html", run=RUN, name=NAMES),
-		paths = "bam_qc/{run}/file_paths.txt"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
-	shell:
-		"""
-		multiqc -n bam_qc/{wildcards.run}/bam_multiqc.html \
-		--file-list {input.paths} >> {log} 2>&1
-		
-		mv bam_qc/{wildcards.run}/bam_multiqc.html "tables/{wildcards.run}/bam_multiqc.html"
-		"""
-
-rule mutect2:
-	output:
-		f1r2 = "variant_calls/{run}/f1r2/{name}-f1r2.tar.gz",
-		vcf = "variant_calls/{run}/unfiltered_vcf/{name}.unfiltered.vcf.gz"
+		f1r2 = temp("variant_calls/{run}/f1r2/{name}-f1r2.tar.gz"),
+		vcf = temp("variant_calls/{run}/unfiltered_vcf/{name}.unfiltered.vcf.gz")
 	input:
 		"recal_aligned_reads/{run}/{name}.recalibrated.bam"
 	params:
@@ -265,8 +266,8 @@ rule mutect2:
 		bed = config["bed"],
 		germline = config["gnomad"],
 		pon = config["mutect2_exomes"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -279,13 +280,13 @@ rule mutect2:
 		-O {output.vcf} >> {log} 2>&1
 		"""
 
-rule readorientation:
+rule read_orientation:
 	output:
-		"variant_calls/{run}/read_orientation_model/{name}-read-orientation-model.tar.gz"
+		temp("variant_calls/{run}/read_orientation_model/{name}-read-orientation-model.tar.gz")
 	input:
 		"variant_calls/{run}/f1r2/{name}-f1r2.tar.gz"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -293,15 +294,15 @@ rule readorientation:
 		gatk LearnReadOrientationModel -I {input} -O {output} >> {log} 2>&1
 		"""
 
-rule pileup:
+rule pileup_summaries:
 	output:
-		"variant_calls/{run}/pileup_summaries/{name}-pileupsummaries.table"
+		temp("variant_calls/{run}/pileup_summaries/{name}-pileupsummaries.table")
 	input:
 		"recal_aligned_reads/{run}/{name}.recalibrated.bam"
 	params:
 		somatic = config["gatk_small_exac"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -312,13 +313,13 @@ rule pileup:
 		-O {output} >> {log} 2>&1
 		"""
 
-rule contamination:
+rule contamination_table:
 	output:
-		"variant_calls/{run}/contamination/{name}-contamination.table"
+		temp("variant_calls/{run}/contamination/{name}-contamination.table")
 	input:
 		pileup = "variant_calls/{run}/pileup_summaries/{name}-pileupsummaries.table"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -326,17 +327,17 @@ rule contamination:
 		gatk CalculateContamination -I {input} -O {output} >> {log} 2>&1
 		"""
 
-rule filter:
+rule filtered_variants:
 	output: 
-		"variant_calls/{run}/filtered_vcf/{name}.filtered.vcf.gz"
+		temp("variant_calls/{run}/filtered_vcf/{name}.filtered.vcf.gz")
 	input:
 		vcf = "variant_calls/{run}/unfiltered_vcf/{name}.unfiltered.vcf.gz",
 		contamination = "variant_calls/{run}/contamination/{name}-contamination.table",
 		readorientation = "variant_calls/{run}/read_orientation_model/{name}-read-orientation-model.tar.gz"
 	params:
 		reference = config["reffasta"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load gatk
@@ -348,37 +349,38 @@ rule filter:
 
 rule annotation:
 	output:
-		"annotation/{run}/{name}.annotated.vcf"
+		protected("annotation/{run}/{name}.annotated.vcf")
 	input:
 		"variant_calls/{run}/filtered_vcf/{name}.filtered.vcf.gz"
 	params:
 		reference = config["reffasta"],
-		gnomad = config["gnomad"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+		gnomad = config["gnomad_gz"]
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load vep
-		vep --dir_cache /disk/w ork/shared/data/vep --cache \
+
+		vep --dir_cache /disk/work/shared/data/vep --cache \
 		--fasta {params.reference} --offline -i {input} \
                 --vcf --pick --force_overwrite --assembly GRCh37 --fork 8 \
                 --failed 1 --sift b \
                 --polyphen b --ccds --hgvs --symbol --numbers --domains --regulatory \
                 --canonical --protein --biotype --af --af_1kg --max_af --pubmed \
                 --uniprot --variant_class --gene_phenotype \
-                --custom file={params.gnomad},short_name=short_name=gnomadAF,format=vcf,type=exact,fields=AC%AF \
+                --custom file={params.gnomad},short_name=gnomadAF,format=vcf,type=exact,fields=AC%AF \
                 -o {output} >> {log} 2>&1
 		"""
 
-rule maf:
+rule annotated_to_maf:
 	output:
-		"maf_files/{run}/{name}.annotated.maf.gz"
+		temp("maf_files/{run}/{name}.annotated.maf.gz")
 	input:
 		"annotation/{run}/{name}.annotated.vcf"
 	params:
 		reference = config["reffasta"]
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		module load samtools
@@ -386,22 +388,22 @@ rule maf:
 		module load tabix
 
 		perl /disk/work/shared/tools/vcf2maf/vcf2maf.pl --input-vcf {input} --output-maf {output} \
-		--retain-fmt --retain-ann gnomadAF_AC,gnomadAF_AF \
-		--tumor-id {wildcards.name} --inhibit-vep \
+		--retain-fmt --retain-info --retain-ann gnomadAF_AC,gnomadAF_AF \
+		--tumor-id {wildcards.name} --vcf-tumor-id {wildcards.name} --inhibit-vep \
 		--ref-fasta {params.reference} >> {log} 2>&1
 
 		gzip {output}
 		"""
 
-rule xlsx:
+rule maf_to_xlsx:
 	output:
 		"tables/{run}/{name}.xlsx"
 	input:
 		"maf_files/{run}/{name}.annotated.maf.gz"
 	params:
 		script = SNAKEDIR + "/R/table_to_xlsx.R"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
+	log:
+		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		/disk/work/shared/tools/R-4.0.2/bin/Rscript \
@@ -409,18 +411,16 @@ rule xlsx:
 		{WORKDIR}/{input} {WORKDIR}/{output} >> {log} 2>&1
 		"""
 
-rule combined:
+rule all_samples_xlsx:
 	output:
 		"tables/{run}/{run}-combined_table.xlsx"
 	input:
 		expand("maf_files/{run}/{name}.annotated.maf.gz", name=NAMES, run=RUN)
 	params:
 		script = SNAKEDIR + "/R/combined_table.R"
-        log:
-                SNAKEDIR + "/logs/{run}.log"
 	shell:
 		"""
 		/disk/work/shared/tools/R-4.0.2/bin/Rscript \
 		{params.script} \
-		{WORKDIR}/maf_files/{wildcards.run} {WORKDIR}/{output} >> {log} 2>&1
+		{WORKDIR}/maf_files/{wildcards.run} {WORKDIR}/{output}
 		"""
