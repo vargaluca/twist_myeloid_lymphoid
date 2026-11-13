@@ -10,6 +10,7 @@ raw_data/
 analyses/
 ._*
 code/snakefile/logs/
+code/snakefile/tmp/
 
 # r stuff
 .Rhistory
