@@ -1,0 +1,26 @@
+[Header];;;;;;;;;
+IEMFileVersion;4;;;;;;;;
+Investigator Name;;;;;;;;;
+Experiment Name;oncoselect01;;;;;;;;
+Date;30/03/2026;;;;;;;;
+Workflow;GenerateFASTQ;;;;;;;;
+Application;FASTQ Only;;;;;;;;
+Assay;;;;;;;;;
+Description;;;;;;;;;
+Chemistry;;;;;;;;;
+;;;;;;;;;
+[Reads];;;;;;;;;
+151;;;;;;;;;
+151;;;;;;;;;
+;;;;;;;;;
+[Settings];;;;;;;;;
+ReverseComplement;0;;;;;;;;
+Adapter;CTGTCTCTTATACACATCT;;;;;;;;
+;;;;;;;;;
+;;;;;;;;;
+[Data];;;;;;;;;
+Sample_ID;Sample_Name;Sample_Plate;Sample_Well;I7_Index_ID;index;I5_Index_ID;index2;Sample_Project;Description
+sample1;sample1;;;;AGATGGAT;;TGGTGCCA;;
+sample2;sample2;;;;GAGCACTG;;CACAATTC;;
+sample3;sample3;;;;GTTGCGGA;;CAGTGCTC;;
+sample4;sample4;;;;AATGGAAC;;TCCGCAAC;;
