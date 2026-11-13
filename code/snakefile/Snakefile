@@ -10,6 +10,7 @@ wildcard_constraints:
 	name  = r"[^/.]+"
 
 RUN = config.get("run", "run1")
+THREADS = config.get("threads", 4)
 NAMES = glob_wildcards(f"raw_reads/{RUN}/{{name}}_L001_R1_001.fastq.gz").name
 WORKDIR = os.getcwd()
 SNAKEDIR = workflow.basedir
@@ -49,11 +50,15 @@ rule raw_fastqc:
 	input: 
 		R1 = "raw_reads/{run}/{name}_L001_R1_001.fastq.gz",
 		R2 = "raw_reads/{run}/{name}_L001_R2_001.fastq.gz"
+	params:
+		fastqc = config["fastqc"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
-		/disk/work/shared/tools/FastQC/fastqc -o raw_fastqc/{wildcards.run}/ {input} >> {log} 2>&1
+		{params.fastqc} -o raw_fastqc/{wildcards.run}/ {input} >> {log} 2>&1
 		"""
 
 rule raw_multiqc:
@@ -65,9 +70,13 @@ rule raw_multiqc:
 		expand("raw_fastqc/{run}/{name}_L001_R2_001_fastqc.html", name=NAMES, run=RUN),
 		expand("raw_fastqc/{run}/{name}_L001_R1_001_fastqc.zip", name=NAMES, run=RUN),
 		expand("raw_fastqc/{run}/{name}_L001_R2_001_fastqc.zip", name=NAMES, run=RUN)
+	params:
+		multiqc = config["multiqc"]
+	threads:
+		THREADS
 	shell:
 		"""
-		multiqc -f raw_fastqc/{wildcards.run}/ --filename raw_fastqc/{wildcards.run}/raw_multiqc.html
+		{params.multiqc} -f raw_fastqc/{wildcards.run}/ --filename raw_fastqc/{wildcards.run}/raw_multiqc.html
 		mv raw_fastqc/{wildcards.run}/raw_multiqc.html tables/{wildcards.run}/
 		"""
 
@@ -80,6 +89,8 @@ rule trim_reads:
 	input:
 		R1 = "raw_reads/{run}/{name}_L001_R1_001.fastq.gz",
 		R2 = "raw_reads/{run}/{name}_L001_R2_001.fastq.gz"
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -115,6 +126,8 @@ rule trimmed_multiqc:
 		expand("trimmed_fastqc/{run}/{name}.trimmed_R1_fastqc.zip", name=NAMES, run=RUN),
 		expand("trimmed_fastqc/{run}/{name}.trimmed_R2_fastqc.html", name=NAMES, run=RUN),
 		expand("trimmed_fastqc/{run}/{name}.trimmed_R2_fastqc.zip", name=NAMES, run=RUN)
+	threads:
+		THREADS
 	shell:
                 """
                 multiqc -f trimmed_fastqc/{wildcards.run} --filename trimmed_fastqc/{wildcards.run}/trimmed_multiqc.html
@@ -144,13 +157,13 @@ rule align_reads:
 		samtools = config["samtools"]
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
+	threads:
+		THREADS
 	shell:
 		"""
-		{params.bwa} mem -R '{params.rg}' -C -t 4 \
+		{params.bwa} mem -R '{params.rg}' -C -t {threads} \
 		{params.reference} {input.R1} {input.R2} 2>> {log} | \
 		{params.samtools} view -b > {output} 2>> {log}
-		echo "exit codes (bwa, samtools): ${{PIPESTATUS[@]}}" >> {log}
-		set -e
 		"""
 
 rule sort_aligned:
@@ -160,6 +173,8 @@ rule sort_aligned:
 		"aligned_reads/{run}/{name}_aligned.bam"
 	params:
 		samtools = config["samtools"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -178,6 +193,8 @@ rule mark_duplicates:
 		gatk = config["gatk"]
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
+	threads:
+		THREADS
 	shell:
 		"""
 		{params.gatk} --java-options "-Xmx12G" MarkDuplicates \
@@ -196,6 +213,8 @@ rule deduplicated_bamqc:
 		report = "bam_qc/{run}/{name}/{name}.qualimapReport.html",
 		bed = config["bed"],
 		qualimap = config["qualimap"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -223,9 +242,13 @@ rule bam_multiqc:
 	input:
 		bams = expand("bam_qc/{run}/{name}", run=RUN, name=NAMES),
 		paths = "bam_qc/{run}/file_paths.txt"
+	params:
+		multiqc = config["multiqc"]
+	threads:
+		THREADS
 	shell:
 		"""
-		multiqc -n bam_qc/{wildcards.run}/bam_multiqc.html \
+		{params.multiqc} -n bam_qc/{wildcards.run}/bam_multiqc.html \
 		--file-list {input.paths}
 
 		mv bam_qc/{wildcards.run}/bam_multiqc.html "tables/{wildcards.run}/bam_multiqc.html"
@@ -244,6 +267,8 @@ rule recalibrate_table:
 		gatk = config["gatk"]
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
+	threads:
+		THREADS
 	shell:
 		"""
 		{params.gatk} BaseRecalibrator -I {input} -R {params.reference} \
@@ -261,6 +286,8 @@ rule apply_recalibration:
 	params:
 		reference = config["reffasta"],
 		gatk = config["gatk"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -285,6 +312,8 @@ rule variant_calling:
 		germline = config["gnomad"],
 		pon = config["mutect2_exomes"],
 		gatk = config["gatk"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -304,6 +333,8 @@ rule read_orientation:
 		"variant_calls/{run}/f1r2/{name}-f1r2.tar.gz"
 	params:
 		gatk = config["gatk"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -319,6 +350,8 @@ rule pileup_summaries:
 	params:
 		somatic = config["gatk_small_exac"],
 		gatk = config["gatk"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -336,6 +369,8 @@ rule contamination_table:
 		pileup = "variant_calls/{run}/pileup_summaries/{name}-pileupsummaries.table"
 	params:
 		gatk = config["gatk"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -356,6 +391,8 @@ rule filtered_variants:
 	params:
 		reference = config["reffasta"],
 		gatk = config["gatk"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -376,13 +413,15 @@ rule annotation:
 		gnomad = config["gnomad_gz"],
 		vep_cache = config["vep_cache"],
 		vep = config["vep"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
 		{params.vep} --dir_cache {params.vep_cache} --cache \
 		--fasta {params.reference} --offline -i {input.vcf} \
-                --vcf --pick --force_overwrite --assembly GRCh37 --fork 8 \
+                --vcf --pick --force_overwrite --assembly GRCh37 --fork {threads} \
                 --failed 1 --sift b \
                 --polyphen b --ccds --hgvs --symbol --numbers --domains --regulatory \
                 --canonical --protein --biotype --af --af_1kg --max_af --pubmed \
@@ -399,6 +438,8 @@ rule annotated_to_maf:
 	params:
 		reference = config["reffasta"],
 		vcf2maf = config["vcf2maf"]
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
@@ -423,6 +464,8 @@ rule maf_to_xlsx:
 	params:
 		Rscript = config["Rscript"],
 		script = SNAKEDIR + "/R/table_to_xlsx.R"
+	threads:
+		THREADS
 	log:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:

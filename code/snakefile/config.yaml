@@ -1,3 +1,5 @@
+# analysis files
+
 reffasta_gz: "/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa.gz"
 reffasta: "/disk/work/shared/data/genomes/ucsc.hg19_bwa_index/hg19.fa"
 gatk_1000G: "/disk/work/shared/data/gatk/hg19_bgz/1000G_phase1.indels.hg19.vcf"
@@ -8,3 +10,16 @@ gnomad: "/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19.vcf"
 gnomad_gz: "/disk/work/shared/data/gnomad/af-only-gnomad.raw.sites_hg19_2.vcf.gz"
 mutect2_exomes: "/disk/work/shared/data/gatk/pon/Mutect2-exome-panel.hg19.vcf"
 gatk_small_exac: "/disk/work/shared/data/gatk/small_exac_common/small_exac_common_3.hg19.vcf"
+
+# analysis tool paths
+
+bwa: "/disk/work/shared/tools/bwa/bwa"
+vep_cache: "/disk/work/shared/data/vep"
+vcf2maf: "/disk/work/shared/tools/vcf2maf/vcf2maf.pl"
+Rscript: "/disk/work/shared/tools/R-4.0.2/bin/Rscript"
+fastqc: "/disk/work/shared/tools/FastQC/fastqc"
+samtools: "/disk/work/shared/tools/samtools/samtools"
+gatk: "/disk/work/shared/tools/gatk/gatk"
+qualimap: "/disk/work/shared/tools/qualimap_v2.3/qualimap"
+vep: "/disk/work/shared/tools/ensembl-vep/vep"
+multiqc: "/usr/local/bin/multiqc"
