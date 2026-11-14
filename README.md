@@ -55,6 +55,7 @@ The workflow has several built-in parameters:
 - intermediate files will be deleted after each run to save space
 - all results (including multiqc files) are saved in the tables/run_number folder
 - remaining intermediate files: bam files from apply_recalibration rule, annotated vcf files from annotation rule
+- log files for each sample are saved to logs/run_number/
 
 ### Running all rules for all files in a run
 When running this workflow, certain things need to be specified in the command line:
