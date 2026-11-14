@@ -10,7 +10,7 @@ Repository for the analysis pipeline on the Twist Myeloid-lymphoid panel
 ## Preparing files
 ### Downloading fastq or bcl files
 To download fastq files, a shell script is already prepared to make it easier. 
-To use, bs auth must be set up beforehand, then project ID for the run:
+To use, bs auth must be set up beforehand and project ID called:
 ```
 /path/to/bs/bs list projects
 ```
