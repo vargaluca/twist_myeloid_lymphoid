@@ -49,6 +49,25 @@ Successfully created fastq files will be stored in the raw_reads/run_number fold
 ![description](code/snakefile/rulegraph.png)
 
 (nodes represent rules to create specific outputs)
+
+folder structure:
+
+```
+base/working/dir
+├── raw_reads
+│   └── run_number
+│       ├── ...R1.fastq.gz
+│       └── ...R2.fastq.gz
+├── trimmed_reads
+│   └── run_number
+│       ├── ...R1.fastq.gz
+│       └── ...R2.fastq.gz
+├── aligned_reads
+│   └── run_number
+│       ├── ...aligned.bam
+│       └── ...sorted.bam
+...
+```
 ## Running snakemake on raw_reads
 The workflow has several built-in parameters:
 - the workflow ignores undetermined and control files
