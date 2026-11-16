@@ -197,6 +197,9 @@ rule mark_duplicates:
 		THREADS
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} --java-options "-Xmx12G" MarkDuplicates \
 		--INPUT {input} \
 		--OUTPUT {output.bam} \
@@ -271,6 +274,9 @@ rule recalibrate_table:
 		THREADS
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} BaseRecalibrator -I {input} -R {params.reference} \
 		-O {output} --known-sites {params.known1} \
 		--known-sites {params.known2} \
@@ -292,6 +298,9 @@ rule apply_recalibration:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} --java-options "-Xmx12G" ApplyBQSR \
 		-R {params.reference} \
 		-I {input.bam} \
@@ -318,6 +327,9 @@ rule variant_calling:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} Mutect2 -R {params.reference} -I {input} \
 		--germline-resource {params.germline} \
 		--panel-of-normals {params.pon} \
@@ -339,6 +351,9 @@ rule read_orientation:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} LearnReadOrientationModel -I {input} -O {output} >> {log} 2>&1
 		"""
 
@@ -356,6 +371,9 @@ rule pileup_summaries:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} GetPileupSummaries -I {input} \
 		-V {params.somatic} \
 		-L {params.somatic} \
@@ -375,6 +393,9 @@ rule contamination_table:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} CalculateContamination -I {input} -O {output} >> {log} 2>&1
 		"""
 
@@ -385,6 +406,7 @@ rule filtered_variants:
 		tbi = temp("variant_calls/{run}/filtered_vcf/{name}.filtered.vcf.gz.tbi")
 	input:
 		vcf = "variant_calls/{run}/unfiltered_vcf/{name}.unfiltered.vcf.gz",
+		stats = "variant_calls/{run}/unfiltered_vcf/{name}.unfiltered.vcf.gz.stats",
 		contamination = "variant_calls/{run}/contamination/{name}-contamination.table",
 		readorientation = "variant_calls/{run}/read_orientation_model/{name}-read-orientation-model.tar.gz",
 		tbi = "variant_calls/{run}/unfiltered_vcf/{name}.unfiltered.vcf.gz.tbi"
@@ -397,6 +419,9 @@ rule filtered_variants:
 		SNAKEDIR + "/logs/{run}/{name}.log"
 	shell:
 		"""
+		export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+		export PATH=$JAVA_HOME/bin:$PATH
+
 		{params.gatk} FilterMutectCalls -R {params.reference} \
 		-V {input.vcf} --contamination-table {input.contamination} --ob-priors {input.readorientation} \
 		-O {output.vcf} >> {log} 2>&1
@@ -463,7 +488,8 @@ rule maf_to_xlsx:
 		"maf_files/{run}/{name}.annotated.maf.gz"
 	params:
 		Rscript = config["Rscript"],
-		script = SNAKEDIR + "/R/table_to_xlsx.R"
+		script = SNAKEDIR + "/R/table_to_xlsx.R",
+		genelist = config["genelist"]
 	threads:
 		THREADS
 	log:
@@ -472,7 +498,7 @@ rule maf_to_xlsx:
 		"""
 		{params.Rscript} \
 		{params.script} \
-		{WORKDIR}/{input} {WORKDIR}/{output} >> {log} 2>&1
+		{WORKDIR}/{input} {WORKDIR}/{output} {params.genelist} >> {log} 2>&1
 		"""
 
 rule all_samples_xlsx:
@@ -482,10 +508,11 @@ rule all_samples_xlsx:
 		expand("maf_files/{run}/{name}.annotated.maf.gz", name=NAMES, run=RUN)
 	params:
 		Rscript = config["Rscript"],
-		script = SNAKEDIR + "/R/combined_table.R"
+		script = SNAKEDIR + "/R/combined_table.R",
+		genelist = config["genelist"]
 	shell:
 		"""
 		{params.Rscript} \
 		{params.script} \
-		{WORKDIR}/maf_files/{wildcards.run} {WORKDIR}/{output}
+		{WORKDIR}/maf_files/{wildcards.run} {WORKDIR}/{output} {params.genelist}
 		"""
