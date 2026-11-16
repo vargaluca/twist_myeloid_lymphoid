@@ -33,7 +33,7 @@ Example sample sheet is provided in the repository (aml_all_example_SampleSheet.
 
 *IMPORTANT: contrary to setup on basespace, P5 indices are required in forward, and P7 indices in reverse orientation*
 
-Sample sheet must be placed in the same bcl_files folder, with aml_all*SampleSheet.csv prefix.
+Sample sheet must be placed in the same bcl_files folder, with *aml_all...SampleSheet.csv* prefix.
 
 Running bcl2fastq:
 ```
@@ -76,6 +76,11 @@ The workflow has several built-in parameters:
 - remaining intermediate files: bam files from apply_recalibration rule, annotated vcf files from annotation rule
 - log files for each sample are saved to logs/run_number/
 
+The workflow works on files with *..._L001_R1/R2_001.fastq.gz* prefixes (Illumina NextSeq2000 standard output).
+The names before *_L001_R1/R2_001.fastq.gz* **cannot** contain dots!
+
+When using the script for a different panel, paths to bed files and genelists in csv format must be supplied in the config.yaml file.
+
 ### Running all rules for all files in a run
 When running this workflow, certain things need to be specified in the command line:
 ```
@@ -105,7 +110,7 @@ snakemake --cores 4 --directory /base/working/directory --configfile config.yaml
 This will run snakemake only until the output files of the align_reads are created.
 
 ## Shell script containing the entire pipeline
-*It is not advised to use this, this is a last resort if Snakemake doesn't work at all*
+**It is not advised to use this, this is a last resort if Snakemake doesn't work at all, or there are weird filenames that cannot be changed (bed files and genelists are hardcoded)**
 
 In code/bash_scripts the twist_complete_pipeline.sh produces the same outputs as the snakemake workflow.
 Running the script:
