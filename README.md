@@ -92,9 +92,9 @@ snakemake --cores 4 --directory /base/working/directory --config run=run_number 
 - config: specifying analysis run number (e.g. run=run_30)
 - configfile: .yaml file containing necessary files and paths for analysis tools. In case a file needs to be replaced (like a bed file), it should be changed here.
 
-To save intermediate files in the run as well, the --notemp flag can be added. This is useful when re-running missing samples. Afterwards, retyping with the --delete-temp-output flag removes all temp files in the run.
+To save intermediate files in the run as well, the *--notemp* flag can be added. This is useful when re-running missing samples. Afterwards, retyping with the *--delete-temp-output* flag removes all temp files in the run.
 
-Threads can be defined under --config (e.g. threads=4). If not defined, the pipeline runs with default 4.
+Threads can be defined under *--config* (e.g. threads=4). If not defined, the pipeline runs with default 4. The number of threads will not exceed the number of cores.
 
 ### Running sections of snakemake:
 It is possible to run a single sample by specifying the desired output:
@@ -110,7 +110,7 @@ snakemake --cores 4 --directory /base/working/directory --configfile config.yaml
 This will run snakemake only until the output files of the align_reads are created.
 
 ## Shell script containing the entire pipeline
-**It is not advised to use this, this is a last resort if Snakemake doesn't work at all, or there are weird filenames that cannot be changed (bed files and genelists are hardcoded)**
+*__It is not advised to use this, this is a last resort if Snakemake doesn't work at all, or there are weird filenames that cannot be changed (bed files and genelists are hardcoded)__*
 
 In code/bash_scripts the twist_complete_pipeline.sh produces the same outputs as the snakemake workflow.
 Running the script:
